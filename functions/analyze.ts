@@ -104,10 +104,10 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         'Authorization': `Bearer ${context.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        max_output_tokens: 6500,
         prompt: {
           id: 'pmpt_697b414096b8819483ef484e373192530a7e4c31f90652ef',
-          version: '1',
+          version: '2',
         },
         input: [
           {
@@ -126,21 +126,52 @@ export async function onRequest(context: PagesContext): Promise<Response> {
 
     if (!responseData.ok) {
       const errorText = await responseData.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error('Analysis failed');
+      console.error('OpenAI API error:', responseData.status, errorText);
+      return new Response(JSON.stringify({
+        error: 'OpenAI API error',
+        status: responseData.status,
+        details: errorText
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
     }
 
-    const response = await responseData.json() as { output?: Array<{ content?: Array<{ text?: string }> }> };
+    const response = await responseData.json() as Record<string, unknown>;
+    console.log('OpenAI Response:', JSON.stringify(response, null, 2));
 
     // Extract text from Responses API format
-    const output = response.output;
     let analysis = 'No analysis could be generated.';
-    if (output && output[0]?.content) {
-      const textContent = output[0].content.find((c: { type?: string; text?: string }) => c.type === 'output_text' || c.text);
-      if (textContent?.text) {
-        analysis = textContent.text;
+
+    // Try different response formats
+    if (response.output && Array.isArray(response.output)) {
+      for (const item of response.output) {
+        if (item && typeof item === 'object') {
+          const obj = item as Record<string, unknown>;
+          if (obj.content && Array.isArray(obj.content)) {
+            for (const c of obj.content) {
+              if (c && typeof c === 'object' && 'text' in c) {
+                analysis = String((c as { text: string }).text);
+                break;
+              }
+            }
+          } else if (obj.text) {
+            analysis = String(obj.text);
+            break;
+          }
+        }
       }
+    } else if (response.choices && Array.isArray(response.choices)) {
+      // Fallback to chat completions format
+      const choice = response.choices[0] as { message?: { content?: string } };
+      if (choice?.message?.content) {
+        analysis = choice.message.content;
+      }
+    } else if (response.text) {
+      analysis = String(response.text);
     }
+
+    console.log('Extracted analysis length:', analysis.length);
 
     return new Response(JSON.stringify({ analysis }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

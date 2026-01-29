@@ -13,7 +13,8 @@
   "dependencies": {
     "openai": "^6.16.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260128.0",
