@@ -29,7 +29,7 @@
       enable = true;
       previews = {
         web = {
-          command = ["npm" "run" "dev" "--" "--port" "$PORT" "--host" "0.0.0.0"];
+          command = ["sh" "-c" "wrangler pages dev --port $PORT --compatibility-date=2024-03-20 --proxy 5173 -- vite --port 5173 --host 0.0.0.0"];
           manager = "web";
         };
       };
