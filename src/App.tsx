@@ -1,6 +1,18 @@
 import LooksmaxForm from './components/LooksmaxForm';
+import Result from './pages/Result';
+import Input from './pages/Input';
 
 function App() {
+  // Simple routing based on pathname
+  const path = window.location.pathname;
+
+  if (path === '/result') {
+    return <Result />;
+  }
+
+  if (path === '/input') {
+    return <Input />;
+  }
   const scrollToAnalyze = () => {
     document.getElementById('analyze')?.scrollIntoView({ behavior: 'smooth' });
   };
