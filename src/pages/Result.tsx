@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const SESSION_TOKEN_KEY = 'looksmax_session_token';
 const TEMP_DATA_KEY = 'looksmax_temp_data';
@@ -214,12 +215,14 @@ const AccordionSection = ({ title, children, defaultOpen = false }: { title: str
 };
 
 const Result = () => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState('');
   const [parsedResult, setParsedResult] = useState<ParsedResult | null>(null);
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(true);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [frontPhotoPreview, setFrontPhotoPreview] = useState<string | null>(null);
+  const [sidePhotoPreview, setSidePhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -237,7 +240,7 @@ const Result = () => {
       } else if (checkoutId) {
         await verifyAndAnalyze(checkoutId);
       } else {
-        setError('No valid session. Please complete payment first.');
+        setError(t('result.noSession'));
         setVerifying(false);
       }
     };
@@ -272,20 +275,25 @@ const Result = () => {
   const runAnalysis = async (token: string) => {
     const savedDataStr = localStorage.getItem(TEMP_DATA_KEY);
     if (!savedDataStr) {
-      setError('No photo data found. Please start over.');
+      setError(t('result.noPhoto'));
       return;
     }
 
     const savedData = JSON.parse(savedDataStr);
-    setPhotoPreview(savedData.photo);
+    setFrontPhotoPreview(savedData.frontPhoto);
+    setSidePhotoPreview(savedData.sidePhoto);
     setLoading(true);
 
     try {
-      const base64Response = await fetch(savedData.photo);
-      const blob = await base64Response.blob();
+      const frontBase64Response = await fetch(savedData.frontPhoto);
+      const frontBlob = await frontBase64Response.blob();
+
+      const sideBase64Response = await fetch(savedData.sidePhoto);
+      const sideBlob = await sideBase64Response.blob();
 
       const formData = new FormData();
-      formData.append('photo', blob, 'photo.jpg');
+      formData.append('frontPhoto', frontBlob, 'front.jpg');
+      formData.append('sidePhoto', sideBlob, 'side.jpg');
       formData.append('height', savedData.height || '');
       formData.append('weight', savedData.weight || '');
 
@@ -322,7 +330,7 @@ const Result = () => {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <p className="text-white font-bold text-xl">Verifying payment...</p>
+          <p className="text-white font-bold text-xl">{t('result.verifying')}</p>
         </div>
       </div>
     );
@@ -332,20 +340,35 @@ const Result = () => {
     return (
       <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center px-6">
         <div className="text-center max-w-md">
-          {photoPreview && (
-            <img
-              src={photoPreview}
-              alt="Your photo"
-              className="w-32 h-32 rounded-full object-cover mx-auto mb-8 border-4 border-primary/30 animate-pulse"
-            />
-          )}
+          <div className="flex justify-center gap-4 mb-8">
+            {frontPhotoPreview && (
+              <div className="text-center">
+                <img
+                  src={frontPhotoPreview}
+                  alt="Front view"
+                  className="w-24 h-24 rounded-2xl object-cover border-4 border-primary/30 animate-pulse"
+                />
+                <p className="text-xs text-slate-500 mt-2">{t('result.front')}</p>
+              </div>
+            )}
+            {sidePhotoPreview && (
+              <div className="text-center">
+                <img
+                  src={sidePhotoPreview}
+                  alt="Side view"
+                  className="w-24 h-24 rounded-2xl object-cover border-4 border-accent/30 animate-pulse"
+                />
+                <p className="text-xs text-slate-500 mt-2">{t('result.side')}</p>
+              </div>
+            )}
+          </div>
           <div className="flex items-center justify-center gap-2 mb-6">
             <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
             <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
             <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
-          <h2 className="text-2xl font-black text-white mb-4">AI Analysis in Progress</h2>
-          <p className="text-slate-400">Examining facial structure, proportions, and aesthetic potential...</p>
+          <h2 className="text-2xl font-black text-white mb-4">{t('result.analyzing')}</h2>
+          <p className="text-slate-400">{t('result.analyzingDesc')}</p>
         </div>
       </div>
     );
@@ -356,10 +379,10 @@ const Result = () => {
       <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center px-6">
         <div className="glass-card rounded-3xl p-12 text-center max-w-md">
           <span className="material-symbols-outlined text-6xl text-red-400 mb-6">error</span>
-          <h1 className="text-2xl font-black text-white mb-4">Something Went Wrong</h1>
+          <h1 className="text-2xl font-black text-white mb-4">{t('result.error')}</h1>
           <p className="text-slate-400 mb-8">{error}</p>
           <a href="/input" className="inline-block bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition">
-            Try Again
+            {t('result.tryAgain')}
           </a>
         </div>
       </div>
@@ -373,35 +396,50 @@ const Result = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold mb-6">
             <span className="material-symbols-outlined text-xl">check_circle</span>
-            Analysis Complete
+            {t('result.complete')}
           </div>
-          <h1 className="text-4xl font-black text-white mb-4">Your Results</h1>
+          <h1 className="text-4xl font-black text-white mb-4">{t('result.yourResults')}</h1>
         </div>
 
         {/* Main Score Card */}
-        {parsedResult && (parsedResult.overallScore || photoPreview) && (
+        {parsedResult && (parsedResult.overallScore || frontPhotoPreview) && (
           <div className="glass-card rounded-[2.5rem] p-8 md:p-12 mb-8">
             <div className="flex flex-col md:flex-row items-center gap-8">
-              {/* Photo */}
-              {photoPreview && (
-                <img
-                  src={photoPreview}
-                  alt="Your photo"
-                  className="w-32 h-32 rounded-full object-cover border-4 border-white/10"
-                />
-              )}
+              {/* Photos */}
+              <div className="flex gap-4">
+                {frontPhotoPreview && (
+                  <div className="text-center">
+                    <img
+                      src={frontPhotoPreview}
+                      alt="Front view"
+                      className="w-24 h-24 rounded-2xl object-cover border-4 border-primary/20"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">{t('result.front')}</p>
+                  </div>
+                )}
+                {sidePhotoPreview && (
+                  <div className="text-center">
+                    <img
+                      src={sidePhotoPreview}
+                      alt="Side view"
+                      className="w-24 h-24 rounded-2xl object-cover border-4 border-accent/20"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">{t('result.side')}</p>
+                  </div>
+                )}
+              </div>
 
               {/* Score */}
               {parsedResult.overallScore && (
                 <div className="flex-1 flex flex-col md:flex-row items-center gap-8">
                   <CircularScore score={parsedResult.overallScore} />
                   <div className="text-center md:text-left">
-                    <h2 className="text-2xl font-black text-white mb-2">PSL Rating</h2>
-                    <p className="text-slate-400 text-sm mb-4">Based on scientific facial analysis</p>
+                    <h2 className="text-2xl font-black text-white mb-2">{t('result.pslRating')}</h2>
+                    <p className="text-slate-400 text-sm mb-4">{t('result.pslDesc')}</p>
                     <div className="flex flex-wrap gap-3">
                       {parsedResult.predictedAge && (
                         <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-bold text-slate-300">
-                          Age: ~{parsedResult.predictedAge}
+                          {t('result.age')}: ~{parsedResult.predictedAge}
                         </span>
                       )}
                       {parsedResult.bodyFat && (
@@ -410,12 +448,12 @@ const Result = () => {
                           parsedResult.bodyFat === 'medium' ? 'bg-amber-500/20 text-amber-400' :
                           'bg-red-500/20 text-red-400'
                         }`}>
-                          Body Fat: {parsedResult.bodyFat}
+                          {t('result.bodyFat')}: {parsedResult.bodyFat}
                         </span>
                       )}
                       {parsedResult.skinType && (
                         <span className="px-3 py-1 bg-blue-500/20 rounded-full text-xs font-bold text-blue-400">
-                          Skin: {parsedResult.skinType}
+                          {t('result.skin')}: {parsedResult.skinType}
                         </span>
                       )}
                     </div>
@@ -434,8 +472,8 @@ const Result = () => {
                 <span className="material-symbols-outlined text-2xl text-white">face_6</span>
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Facial Region Analysis</h2>
-                <p className="text-sm text-slate-400">Detailed breakdown by area</p>
+                <h2 className="text-xl font-black text-white">{t('result.facialAnalysis')}</h2>
+                <p className="text-sm text-slate-400">{t('result.facialDesc')}</p>
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-x-8">
@@ -459,8 +497,8 @@ const Result = () => {
                 <span className="material-symbols-outlined text-2xl text-white">description</span>
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Detailed Analysis</h2>
-                <p className="text-sm text-slate-400">Personalized insights and recommendations</p>
+                <h2 className="text-xl font-black text-white">{t('result.detailedAnalysis')}</h2>
+                <p className="text-sm text-slate-400">{t('result.detailedDesc')}</p>
               </div>
             </div>
             {parsedResult.sections.map((section, idx) => (
@@ -494,8 +532,8 @@ const Result = () => {
                 <span className="material-symbols-outlined text-2xl text-white">analytics</span>
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Your Analysis</h2>
-                <p className="text-sm text-slate-400">AI-powered recommendations</p>
+                <h2 className="text-xl font-black text-white">{t('result.yourAnalysis')}</h2>
+                <p className="text-sm text-slate-400">{t('result.aiRecommendations')}</p>
               </div>
             </div>
             <div className="prose prose-invert max-w-none">
@@ -524,14 +562,14 @@ const Result = () => {
             className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold transition flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined">print</span>
-            Save Report
+            {t('result.saveReport')}
           </button>
           <a
             href="/"
             className="flex-1 py-4 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold transition flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined">home</span>
-            Back to Home
+            {t('result.backHome')}
           </a>
         </div>
       </div>

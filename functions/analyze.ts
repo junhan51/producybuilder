@@ -60,39 +60,52 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     }
 
     const formData = await context.request.formData();
-    const photo = formData.get('photo');
+    const frontPhoto = formData.get('frontPhoto');
+    const sidePhoto = formData.get('sidePhoto');
     const height = formData.get('height');
     const weight = formData.get('weight');
 
-    if (!photo || !(photo instanceof File)) {
-      return new Response(JSON.stringify({ error: 'No photo provided' }), {
+    if (!frontPhoto || !(frontPhoto instanceof File)) {
+      return new Response(JSON.stringify({ error: 'No front photo provided' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    // Validate file size
-    if (photo.size > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: 'File too large. Maximum size is 10MB.' }), {
+    if (!sidePhoto || !(sidePhoto instanceof File)) {
+      return new Response(JSON.stringify({ error: 'No side profile photo provided' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(photo.type)) {
+    // Validate file sizes
+    if (frontPhoto.size > MAX_FILE_SIZE || sidePhoto.size > MAX_FILE_SIZE) {
+      return new Response(JSON.stringify({ error: 'File too large. Maximum size is 10MB per photo.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // Validate file types
+    if (!ALLOWED_TYPES.includes(frontPhoto.type) || !ALLOWED_TYPES.includes(sidePhoto.type)) {
       return new Response(JSON.stringify({ error: 'Invalid file type. Allowed: JPEG, PNG, WebP, GIF' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-    
-    // Convert image to base64 (using Web API since Buffer is not available in Cloudflare Workers)
-    const imageBuffer = await photo.arrayBuffer();
-    const imageBase64 = btoa(
-      new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+
+    // Convert images to base64
+    const frontBuffer = await frontPhoto.arrayBuffer();
+    const frontBase64 = btoa(
+      new Uint8Array(frontBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
-    
+
+    const sideBuffer = await sidePhoto.arrayBuffer();
+    const sideBase64 = btoa(
+      new Uint8Array(sideBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+
     const heightStr = typeof height === 'string' ? height : 'unknown';
     const weightStr = typeof weight === 'string' ? weight : 'unknown';
 
@@ -107,16 +120,20 @@ export async function onRequest(context: PagesContext): Promise<Response> {
         max_output_tokens: 6500,
         prompt: {
           id: 'pmpt_697b414096b8819483ef484e373192530a7e4c31f90652ef',
-          version: '2',
+          version: '4',
         },
         input: [
           {
             role: 'user',
             content: [
-              { type: 'input_text', text: `Height: ${heightStr} cm, Weight: ${weightStr} kg` },
+              { type: 'input_text', text: `Height: ${heightStr} cm, Weight: ${weightStr} kg\n\nFirst image: Front view (facing camera)\nSecond image: Side profile view` },
               {
                 type: 'input_image',
-                image_url: `data:${photo.type};base64,${imageBase64}`,
+                image_url: `data:${frontPhoto.type};base64,${frontBase64}`,
+              },
+              {
+                type: 'input_image',
+                image_url: `data:${sidePhoto.type};base64,${sideBase64}`,
               },
             ],
           },

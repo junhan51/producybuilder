@@ -1,4 +1,8 @@
+import { useLanguage } from '../i18n/LanguageContext';
+
 const LooksmaxForm = () => {
+  const { t } = useLanguage();
+
   const goToInput = () => {
     window.location.href = '/input';
   };
@@ -13,8 +17,8 @@ const LooksmaxForm = () => {
               <span className="material-symbols-outlined text-2xl text-primary">face_6</span>
             </div>
             <div>
-              <h4 className="font-bold text-white">Facial Analysis</h4>
-              <p className="text-sm text-slate-400">Golden ratio & symmetry evaluation</p>
+              <h4 className="font-bold text-white">{t('form.facialAnalysis')}</h4>
+              <p className="text-sm text-slate-400">{t('form.facialAnalysisDesc')}</p>
             </div>
           </div>
           <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl">
@@ -22,8 +26,8 @@ const LooksmaxForm = () => {
               <span className="material-symbols-outlined text-2xl text-accent">apparel</span>
             </div>
             <div>
-              <h4 className="font-bold text-white">Style Recommendations</h4>
-              <p className="text-sm text-slate-400">Personalized wardrobe & grooming tips</p>
+              <h4 className="font-bold text-white">{t('form.styleRec')}</h4>
+              <p className="text-sm text-slate-400">{t('form.styleRecDesc')}</p>
             </div>
           </div>
           <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl">
@@ -31,8 +35,8 @@ const LooksmaxForm = () => {
               <span className="material-symbols-outlined text-2xl text-emerald-500">fitness_center</span>
             </div>
             <div>
-              <h4 className="font-bold text-white">Body Optimization</h4>
-              <p className="text-sm text-slate-400">Fitness & posture improvement plan</p>
+              <h4 className="font-bold text-white">{t('form.bodyOpt')}</h4>
+              <p className="text-sm text-slate-400">{t('form.bodyOptDesc')}</p>
             </div>
           </div>
         </div>
@@ -43,12 +47,12 @@ const LooksmaxForm = () => {
           className="w-full py-4 bg-gradient-to-r from-accent to-primary hover:opacity-90 text-white rounded-2xl font-black text-lg shadow-2xl shadow-accent/20 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-3"
         >
           <span className="material-symbols-outlined">auto_awesome</span>
-          Unlock Premium Analysis
+          {t('form.cta')}
         </button>
 
         {/* Info */}
         <p className="text-center text-slate-500 text-sm mt-4">
-          One-time payment. No subscription required.
+          {t('form.info')}
         </p>
       </div>
     </div>
