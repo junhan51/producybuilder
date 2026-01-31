@@ -2,6 +2,53 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const TEMP_DATA_KEY = 'looksmax_temp_data';
+const MAX_IMAGE_SIZE = 1200; // Max width/height in pixels
+const JPEG_QUALITY = 0.8; // 80% quality
+
+// Compress and resize image using canvas
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    img.onload = () => {
+      let { width, height } = img;
+
+      // Calculate new dimensions while maintaining aspect ratio
+      if (width > height) {
+        if (width > MAX_IMAGE_SIZE) {
+          height = Math.round((height * MAX_IMAGE_SIZE) / width);
+          width = MAX_IMAGE_SIZE;
+        }
+      } else {
+        if (height > MAX_IMAGE_SIZE) {
+          width = Math.round((width * MAX_IMAGE_SIZE) / height);
+          height = MAX_IMAGE_SIZE;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+        resolve(compressedBase64);
+      } else {
+        reject(new Error('Could not get canvas context'));
+      }
+
+      URL.revokeObjectURL(img.src);
+    };
+
+    img.onerror = () => {
+      reject(new Error('Failed to load image'));
+    };
+
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 const Input = () => {
   const { t } = useLanguage();
@@ -14,7 +61,7 @@ const Input = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleFrontPhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFrontPhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
 
@@ -23,15 +70,17 @@ const Input = () => {
       }
       setFrontPhoto(URL.createObjectURL(file));
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFrontPhotoBase64(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file);
+        setFrontPhotoBase64(compressed);
+      } catch (err) {
+        console.error('Image compression failed:', err);
+        setError('Failed to process image');
+      }
     }
   };
 
-  const handleSidePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSidePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
 
@@ -40,11 +89,13 @@ const Input = () => {
       }
       setSidePhoto(URL.createObjectURL(file));
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSidePhotoBase64(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file);
+        setSidePhotoBase64(compressed);
+      } catch (err) {
+        console.error('Image compression failed:', err);
+        setError('Failed to process image');
+      }
     }
   };
 
@@ -58,13 +109,20 @@ const Input = () => {
     setError('');
 
     // Save data to localStorage before checkout
-    localStorage.setItem(TEMP_DATA_KEY, JSON.stringify({
-      frontPhoto: frontPhotoBase64,
-      sidePhoto: sidePhotoBase64,
-      height,
-      weight,
-      timestamp: Date.now(),
-    }));
+    try {
+      localStorage.setItem(TEMP_DATA_KEY, JSON.stringify({
+        frontPhoto: frontPhotoBase64,
+        sidePhoto: sidePhotoBase64,
+        height,
+        weight,
+        timestamp: Date.now(),
+      }));
+    } catch (storageError) {
+      console.error('Storage error:', storageError);
+      setError('Image files are too large. Please use smaller photos.');
+      setCheckoutLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/checkout', {
