@@ -7,97 +7,23 @@ const TEMP_DATA_KEY = 'looksmax_temp_data';
 
 interface ParsedResult {
   overallScore: number | null;
-  predictedAge: string | null;
+  predictedAge: number | null;
   bodyFat: string | null;
   facialScores: { region: string; score: number; description: string }[];
   skinType: string | null;
   sections: { title: string; content: string }[];
 }
 
-const parseAnalysis = (text: string): ParsedResult => {
-  const result: ParsedResult = {
-    overallScore: null,
-    predictedAge: null,
-    bodyFat: null,
-    facialScores: [],
-    skinType: null,
-    sections: [],
-  };
+// Helper to check if content has key highlights
+const hasKeyHighlight = (content: string): boolean => {
+  return content.includes('[KEY TAKEAWAY]') || content.includes('[PRIORITY RULE]');
+};
 
-  // Extract overall score (PSL scale)
-  const scoreMatch = text.match(/(?:attractiveness rating|overall|score)[:\s]*(\d+\.?\d*)\s*[\/out of]*\s*10/i);
-  if (scoreMatch) {
-    result.overallScore = parseFloat(scoreMatch[1]);
-  }
-
-  // Extract predicted age
-  const ageMatch = text.match(/(?:predicted age|age)[:\s]*(\d+)\s*(?:years|yrs)?/i);
-  if (ageMatch) {
-    result.predictedAge = ageMatch[1];
-  }
-
-  // Extract body fat level
-  const bodyFatMatch = text.match(/(?:body fat|fat level)[:\s]*(low|medium|high)/i);
-  if (bodyFatMatch) {
-    result.bodyFat = bodyFatMatch[1].toLowerCase();
-  }
-
-  // Extract facial region scores
-  const regions = ['eye area', 'midface', 'jaw', 'chin', 'skin', 'symmetry'];
-  regions.forEach(region => {
-    const regex = new RegExp(`${region}[:\\s]*(\\d+\\.?\\d*)\\s*(?:[/]|out of)?\\s*10`, 'i');
-    const match = text.match(regex);
-    if (match) {
-      // Find description after the score
-      const descRegex = new RegExp(`${region}[^\\n]*?\\d+[^\\n]*?[-–:]?\\s*([^\\n]+)`, 'i');
-      const descMatch = text.match(descRegex);
-      result.facialScores.push({
-        region: region.charAt(0).toUpperCase() + region.slice(1),
-        score: parseFloat(match[1]),
-        description: descMatch ? descMatch[1].trim() : '',
-      });
-    }
-  });
-
-  // Extract skin type
-  const skinMatch = text.match(/(?:skin type)[:\s]*(dry|oily|combination)/i);
-  if (skinMatch) {
-    result.skinType = skinMatch[1].toLowerCase();
-  }
-
-  // Split into sections
-  const sectionHeaders = [
-    'Overall Snapshot',
-    'Facial Region Scores',
-    'Skin Type',
-    'Actionable',
-    'Actual guidance',
-    'Body Fat Management',
-    'Improvement Potential',
-  ];
-
-  let currentSection = { title: 'Overview', content: '' };
-  const lines = text.split('\n');
-
-  lines.forEach(line => {
-    const headerMatch = sectionHeaders.find(h =>
-      line.toLowerCase().includes(h.toLowerCase())
-    );
-    if (headerMatch && line.trim().length < 100) {
-      if (currentSection.content.trim()) {
-        result.sections.push({ ...currentSection });
-      }
-      currentSection = { title: line.replace(/[#*]/g, '').trim(), content: '' };
-    } else {
-      currentSection.content += line + '\n';
-    }
-  });
-
-  if (currentSection.content.trim()) {
-    result.sections.push(currentSection);
-  }
-
-  return result;
+// Process content to add highlight markers for rendering
+const processHighlights = (content: string): string => {
+  return content
+    .replace(/\[KEY TAKEAWAY\]/g, '**🔑 KEY TAKEAWAY:**')
+    .replace(/\[PRIORITY RULE\]/g, '**⭐ PRIORITY RULE:**');
 };
 
 // Circular Progress Component
@@ -296,6 +222,7 @@ const Result = () => {
       formData.append('sidePhoto', sideBlob, 'side.jpg');
       formData.append('height', savedData.height || '');
       formData.append('weight', savedData.weight || '');
+      formData.append('language', savedData.language || 'en');
 
       const response = await fetch('/analyze', {
         method: 'POST',
@@ -311,8 +238,10 @@ const Result = () => {
       }
 
       const data = await response.json();
-      setAnalysis(data.analysis);
-      setParsedResult(parseAnalysis(data.analysis));
+      // API now returns structured JSON directly
+      setParsedResult(data.analysis);
+      // Store raw JSON as string for fallback display
+      setAnalysis(JSON.stringify(data.analysis, null, 2));
 
       localStorage.removeItem(TEMP_DATA_KEY);
     } catch (err) {
@@ -501,26 +430,56 @@ const Result = () => {
                 <p className="text-sm text-slate-400">{t('result.detailedDesc')}</p>
               </div>
             </div>
-            {parsedResult.sections.map((section, idx) => (
-              <AccordionSection key={idx} title={section.title} defaultOpen={idx === 0}>
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown
-                    components={{
-                      h1: ({ children }) => <h3 className="text-lg font-bold text-white mt-4 mb-2">{children}</h3>,
-                      h2: ({ children }) => <h4 className="text-base font-bold text-white mt-3 mb-2">{children}</h4>,
-                      h3: ({ children }) => <h5 className="text-sm font-bold text-white mt-2 mb-1">{children}</h5>,
-                      p: ({ children }) => <p className="text-slate-300 mb-3 leading-relaxed">{children}</p>,
-                      ul: ({ children }) => <ul className="list-disc list-inside text-slate-300 mb-3 space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal list-inside text-slate-300 mb-3 space-y-1">{children}</ol>,
-                      li: ({ children }) => <li className="text-slate-300">{children}</li>,
-                      strong: ({ children }) => <strong className="text-white font-bold">{children}</strong>,
-                    }}
-                  >
-                    {section.content}
-                  </ReactMarkdown>
-                </div>
-              </AccordionSection>
-            ))}
+            {parsedResult.sections.map((section, idx) => {
+              const isHighlightSection = hasKeyHighlight(section.content);
+              const processedContent = processHighlights(section.content);
+
+              return (
+                <AccordionSection
+                  key={idx}
+                  title={section.title}
+                  defaultOpen={idx === 0 || isHighlightSection}
+                >
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => <h3 className="text-lg font-bold text-white mt-4 mb-2">{children}</h3>,
+                        h2: ({ children }) => <h4 className="text-base font-bold text-white mt-3 mb-2">{children}</h4>,
+                        h3: ({ children }) => <h5 className="text-sm font-bold text-white mt-2 mb-1">{children}</h5>,
+                        p: ({ children }) => {
+                          const text = String(children);
+                          // Check if this paragraph contains a key highlight
+                          if (text.includes('🔑 KEY TAKEAWAY:') || text.includes('⭐ PRIORITY RULE:')) {
+                            return (
+                              <div className="my-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30">
+                                <p className="text-white font-medium leading-relaxed m-0">{children}</p>
+                              </div>
+                            );
+                          }
+                          return <p className="text-slate-300 mb-3 leading-relaxed">{children}</p>;
+                        },
+                        ul: ({ children }) => <ul className="list-disc list-inside text-slate-300 mb-3 space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal list-inside text-slate-300 mb-3 space-y-1">{children}</ol>,
+                        li: ({ children }) => <li className="text-slate-300">{children}</li>,
+                        strong: ({ children }) => {
+                          const text = String(children);
+                          // Style the KEY TAKEAWAY and PRIORITY RULE labels
+                          if (text.includes('🔑 KEY TAKEAWAY:')) {
+                            return <strong className="text-primary font-black text-base">{children}</strong>;
+                          }
+                          if (text.includes('⭐ PRIORITY RULE:')) {
+                            return <strong className="text-accent font-black text-base">{children}</strong>;
+                          }
+                          return <strong className="text-white font-bold">{children}</strong>;
+                        },
+                      }}
+                    >
+                      {processedContent}
+                    </ReactMarkdown>
+                  </div>
+                </AccordionSection>
+              );
+            })}
           </div>
         )}
 

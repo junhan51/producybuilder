@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 
+const LANGUAGE_KEY = 'looksmax_language';
+
 const TEMP_DATA_KEY = 'looksmax_temp_data';
 const MAX_IMAGE_SIZE = 1200; // Max width/height in pixels
 const JPEG_QUALITY = 0.8; // 80% quality
@@ -109,12 +111,14 @@ const Input = () => {
     setError('');
 
     // Save data to localStorage before checkout
+    const userLanguage = localStorage.getItem(LANGUAGE_KEY) || 'en';
     try {
       localStorage.setItem(TEMP_DATA_KEY, JSON.stringify({
         frontPhoto: frontPhotoBase64,
         sidePhoto: sidePhotoBase64,
         height,
         weight,
+        language: userLanguage,
         timestamp: Date.now(),
       }));
     } catch (storageError) {
