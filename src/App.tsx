@@ -67,34 +67,12 @@ function App() {
           <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 font-medium">
             {t('hero.subtitle')}
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <button
-              onClick={scrollToAnalyze}
-              className="w-full sm:w-auto px-10 py-5 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-xl shadow-2xl shadow-primary/20 transition-all hover:-translate-y-1"
-            >
-              {t('hero.cta')}
-            </button>
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-3">
-                <img
-                  alt="User"
-                  className="w-10 h-10 rounded-full border-2 border-background-dark"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOKaXzIMdSt3gyhw9l4OAXSF3Wi3EnQAqm2GUj0BVWfp5BOTGyeZMmb5JWcFvTbisPYNzPVfNAv_uVDq4SpcIx_cAi2t6XyJHPfTZf_SipvsRuUc8NdOOolESFbGsGGH4i7w4XDbfikDXKQ-HaANWNfZpaBhyGP9hUaP7c10sbSJZIXoU7SvKUGk9TXbeaX0phz64MxcV17bzNE-wXSnid84Vb2cNihRVE-jRR3C4Kz8OnqkN3wurMxNowBeBj_--YFAzr90eN9A"
-                />
-                <img
-                  alt="User"
-                  className="w-10 h-10 rounded-full border-2 border-background-dark"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2dlxl3F70c6fIGIKaTd7ocazwbfYVcy7zQc-KI7GCo8iihN1n8afbYLx9WmuIivJ4GVJqyFkjCSs3Biaw03ppeUpds39xq2WpU9o654JQhCjXTHmiYEnobKDjEVQcgFQjchAUvxe4P2SUZ8XRLLquh5vw4Hwm0iykQpMoM9HxsXYturayhMYAqtXv7iF8mdpGli57F04KW1nBq6poNC-x8IP5qvVWCfuLASsYzVymiGUvP0wzkyhzejTTWfTJpBGFU6Yl5rZZgQ"
-                />
-                <img
-                  alt="User"
-                  className="w-10 h-10 rounded-full border-2 border-background-dark"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIfDUNGmvqnhwzxNDbVNO_l_4iPZ4McapptcZy_EiIZluJhyanIarFm7fyvzbA9ztAKShKjsMiCznawV-6f3ga3GkrXZ64xdyOfSGWR8Uzpwq9-QHeLBGFa7IzPxmJf5AA0dnUCD4lwmjC9hIzEslckloQ6TFMw1f7bgKlcOzGbYu23jTXpzb0SNqby9i5zO8gRrFo794HfK2E6hLrMi3CkbMR8yYoNMBltgspktAWcBzqpgcJBvlTaT526SwWP7_Uj1Tlycdekw"
-                />
-              </div>
-              <span className="text-sm font-bold text-slate-500">{t('hero.users')}</span>
-            </div>
-          </div>
+          <button
+            onClick={scrollToAnalyze}
+            className="px-10 py-5 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-xl shadow-2xl shadow-primary/20 transition-all hover:-translate-y-1"
+          >
+            {t('hero.cta')}
+          </button>
         </div>
       </section>
 
@@ -109,8 +87,8 @@ function App() {
 
       {/* Optimization */}
       <section className="py-32 px-6" id="optimization">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-12">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12">
             <div className="flex flex-col items-center text-center group">
               <div className="w-24 h-24 rounded-3xl glass-card flex items-center justify-center mb-8 border-white/10 group-hover:border-primary/50 transition-all duration-500 group-hover:bg-primary/5">
                 <span className="material-symbols-outlined text-5xl text-primary">face_6</span>
@@ -127,15 +105,6 @@ function App() {
               <h3 className="text-2xl font-black mb-4">{t('optimization.style')}</h3>
               <p className="text-slate-400 font-medium leading-relaxed max-w-xs">
                 {t('optimization.styleDesc')}
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center group">
-              <div className="w-24 h-24 rounded-3xl glass-card flex items-center justify-center mb-8 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 group-hover:bg-emerald-500/5">
-                <span className="material-symbols-outlined text-5xl text-emerald-500">accessibility_new</span>
-              </div>
-              <h3 className="text-2xl font-black mb-4">{t('optimization.posture')}</h3>
-              <p className="text-slate-400 font-medium leading-relaxed max-w-xs">
-                {t('optimization.postureDesc')}
               </p>
             </div>
           </div>
